@@ -1,0 +1,157 @@
+from flask import Flask, render_template_string, request
+import requests
+
+app = Flask(__name__)
+
+TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chomp 🍫</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: start;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            margin-top: 50px;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 12px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #6f42c1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #5a34a5;
+        }
+        img {
+            width: 200px;
+            margin-top: 20px;
+        }
+        .info {
+            text-align: left;
+            margin-top: 30px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .info h2 {
+            margin-top: 10px;
+            color: #343a40;
+        }
+        .info h3 {
+            margin-top: 20px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chomp 🍫</h1>
+        <form method="post">
+            <input type="text" name="barcode" placeholder="Enter Barcode" required>
+            <br>
+            <button type="submit">Search</button>
+        </form>
+
+        {% if product %}
+            <div class="info">
+                <h2>{{ product['name'] }}</h2>
+                {% if product['image_url'] %}
+                    <img src="{{ product['image_url'] }}" alt="Product Image">
+                {% endif %}
+                <h3>Nutrition Facts (per 100g)</h3>
+                <ul>
+                    {% for nutrient, value in product['nutrition'].items() %}
+                        <li>{{ nutrient }}: {{ value }}</li>
+                    {% endfor %}
+                </ul>
+                <h3>Common Allergens</h3>
+                <ul>
+                    {% if product['allergens'] %}
+                        {% for allergen in product['allergens'] %}
+                            <li>{{ allergen }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>None</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+'''
+
+
+def fetch_product_info(barcode):
+    url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        return None
+
+    data = response.json()
+    if data.get('status') != 1:
+        return None
+
+    product_data = data['product']
+    nutrition = {
+        'Energy (kcal)': product_data.get('nutriments', {}).get('energy-kcal_100g', 'N/A'),
+        'Fat (g)': product_data.get('nutriments', {}).get('fat_100g', 'N/A'),
+        'Carbohydrates (g)': product_data.get('nutriments', {}).get('carbohydrates_100g', 'N/A'),
+        'Sugars (g)': product_data.get('nutriments', {}).get('sugars_100g', 'N/A'),
+        'Proteins (g)': product_data.get('nutriments', {}).get('proteins_100g', 'N/A'),
+        'Salt (g)': product_data.get('nutriments', {}).get('salt_100g', 'N/A'),
+    }
+    allergens = [a.split(':')[-1] for a in product_data.get('allergens_tags', [])]
+
+    return {
+        'name': product_data.get('product_name', 'Unknown Product'),
+        'image_url': product_data.get('image_url', ''),
+        'nutrition': nutrition,
+        'allergens': allergens
+    }
+
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    product = None
+    if request.method == 'POST':
+        barcode = request.form['barcode']
+        product = fetch_product_info(barcode)
+    return render_template_string(TEMPLATE, product=product)
+
+if __name__ == '__main__':
+    app.run(debug=True)
