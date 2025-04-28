@@ -13,39 +13,45 @@ TEMPLATE = '''
     <style>
         body {
             font-family: 'Nunito', sans-serif;
-            background: #f8f9fa;
+            background: #FFD6CC; /* pastel red/orange */
             margin: 0;
             padding: 0;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: start;
-            min-height: 100vh;
+            align-items: center;
         }
         .container {
             background: white;
-            margin-top: 50px;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
             width: 90%;
-            max-width: 600px;
+            max-width: 500px;
             text-align: center;
         }
         h1 {
             font-size: 2.5rem;
             margin-bottom: 20px;
         }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
         input[type="text"] {
-            width: 70%;
+            width: 100%;
+            max-width: 300px;
             padding: 12px;
             font-size: 16px;
-            margin-bottom: 20px;
             border: 2px solid #ccc;
             border-radius: 8px;
+            margin-bottom: 20px;
         }
         button {
             padding: 12px 20px;
-            background-color: #6f42c1;
+            background-color: #ff6f61;
             color: white;
             border: none;
             border-radius: 8px;
@@ -54,7 +60,7 @@ TEMPLATE = '''
             transition: background 0.3s;
         }
         button:hover {
-            background-color: #5a34a5;
+            background-color: #e05a4f;
         }
         img {
             width: 200px;
@@ -64,16 +70,15 @@ TEMPLATE = '''
             text-align: left;
             margin-top: 30px;
         }
-        ul {
-            padding-left: 20px;
-        }
         .info h2 {
-            margin-top: 10px;
             color: #343a40;
         }
         .info h3 {
-            margin-top: 20px;
             color: #495057;
+            margin-top: 20px;
+        }
+        ul {
+            padding-left: 20px;
         }
     </style>
 </head>
@@ -82,7 +87,6 @@ TEMPLATE = '''
         <h1>Chomp 🍫</h1>
         <form method="post">
             <input type="text" name="barcode" placeholder="Enter Barcode" required>
-            <br>
             <button type="submit">Search</button>
         </form>
 
@@ -114,7 +118,6 @@ TEMPLATE = '''
 </body>
 </html>
 '''
-
 
 def fetch_product_info(barcode):
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
