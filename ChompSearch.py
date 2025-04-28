@@ -84,7 +84,7 @@ TEMPLATE = '''
 </head>
 <body>
     <div class="container">
-        <h1>Chomp 🍫</h1>
+        <h1>Chomp – Let's Find Your Snack!</h1>
         <form method="post">
             <input type="text" name="barcode" placeholder="Enter Barcode" required>
             <button type="submit">Search</button>
