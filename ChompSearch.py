@@ -92,27 +92,29 @@ TEMPLATE = '''
 
         {% if product %}
             <div class="info">
-                <h2>{{ product['name'] }}</h2>
-                {% if product['image_url'] %}
-                    <img src="{{ product['image_url'] }}" alt="Product Image">
-                {% endif %}
-                <h3>Nutrition Facts (per 100g)</h3>
-                <ul>
-                    {% for nutrient, value in product['nutrition'].items() %}
-                        <li>{{ nutrient }}: {{ value }}</li>
-                    {% endfor %}
-                </ul>
-                <h3>Common Allergens</h3>
-                <ul>
-                    {% if product['allergens'] %}
-                        {% for allergen in product['allergens'] %}
-                            <li>{{ allergen }}</li>
-                        {% endfor %}
-                    {% else %}
-                        <li>None</li>
-                    {% endif %}
-                </ul>
-            </div>
+    <h2>{{ product['name'] }}</h2>
+    {% if product['image_url'] %}
+        <img src="{{ product['image_url'] }}" alt="Product Image">
+    {% endif %}
+    <h3>Category: {{ product['category'] }}</h3>
+    <h3>Nutrition Facts (per 100g)</h3>
+    <ul>
+        {% for nutrient, value in product['nutrition'].items() %}
+            <li>{{ nutrient }}: {{ value }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Common Allergens</h3>
+    <ul>
+        {% if product['allergens'] %}
+            {% for allergen in product['allergens'] %}
+                <li>{{ allergen }}</li>
+            {% endfor %}
+        {% else %}
+            <li>None</li>
+        {% endif %}
+    </ul>
+</div>
+
         {% endif %}
     </div>
 </body>
@@ -131,22 +133,42 @@ def fetch_product_info(barcode):
         return None
 
     product_data = data['product']
+    nutriments = product_data.get('nutriments', {})
+    ingredients = product_data.get('ingredients_text', '').lower()
+
+    sugar = nutriments.get('sugars_100g', 0) or 0
+    fat = nutriments.get('fat_100g', 0) or 0
+    salt = nutriments.get('salt_100g', 0) or 0
+
+    # Simple classification rules
+    if sugar > 10:
+        category = "Sweet"
+    elif salt > 1 or "salt" in ingredients or "cheese" in ingredients or "spice" in ingredients:
+        category = "Savory"
+    elif sugar < 5 and fat < 5 and salt < 0.5:
+        category = "Healthy"
+    else:
+        category = "Uncategorized"
+
     nutrition = {
-        'Energy (kcal)': product_data.get('nutriments', {}).get('energy-kcal_100g', 'N/A'),
-        'Fat (g)': product_data.get('nutriments', {}).get('fat_100g', 'N/A'),
-        'Carbohydrates (g)': product_data.get('nutriments', {}).get('carbohydrates_100g', 'N/A'),
-        'Sugars (g)': product_data.get('nutriments', {}).get('sugars_100g', 'N/A'),
-        'Proteins (g)': product_data.get('nutriments', {}).get('proteins_100g', 'N/A'),
-        'Salt (g)': product_data.get('nutriments', {}).get('salt_100g', 'N/A'),
+        'Energy (kcal)': nutriments.get('energy-kcal_100g', 'N/A'),
+        'Fat (g)': fat,
+        'Carbohydrates (g)': nutriments.get('carbohydrates_100g', 'N/A'),
+        'Sugars (g)': sugar,
+        'Proteins (g)': nutriments.get('proteins_100g', 'N/A'),
+        'Salt (g)': salt,
     }
+
     allergens = [a.split(':')[-1] for a in product_data.get('allergens_tags', [])]
 
     return {
         'name': product_data.get('product_name', 'Unknown Product'),
         'image_url': product_data.get('image_url', ''),
         'nutrition': nutrition,
-        'allergens': allergens
+        'allergens': allergens,
+        'category': category
     }
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
