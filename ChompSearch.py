@@ -121,18 +121,31 @@ TEMPLATE = '''
 </html>
 '''
 
-def fetch_product_info(barcode):
+def fetch_product_info_by_barcode(barcode):
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
     response = requests.get(url)
-
     if response.status_code != 200:
         return None
-
     data = response.json()
     if data.get('status') != 1:
         return None
+    return data['product']
 
-    product_data = data['product']
+def fetch_product_info_by_keyword(keyword):
+    params = {
+        'search_terms': keyword,
+        'search_simple': 1,
+        'action': 'process',
+        'json': 1,
+        'page_size': 1
+    }
+    response = requests.get("https://world.openfoodfacts.org/cgi/search.pl", params=params)
+    data = response.json()
+    if not data.get('products'):
+        return None
+    return data['products'][0]
+
+def process_product_data(product_data):
     nutriments = product_data.get('nutriments', {})
     ingredients = product_data.get('ingredients_text', '').lower()
 
@@ -140,7 +153,6 @@ def fetch_product_info(barcode):
     fat = nutriments.get('fat_100g', 0) or 0
     salt = nutriments.get('salt_100g', 0) or 0
 
-    # Simple classification rules
     if sugar > 10:
         category = "Sweet"
     elif salt > 1 or "salt" in ingredients or "cheese" in ingredients or "spice" in ingredients:
@@ -169,14 +181,25 @@ def fetch_product_info(barcode):
         'category': category
     }
 
-
 @app.route('/', methods=['GET', 'POST'])
 def home():
     product = None
     if request.method == 'POST':
-        barcode = request.form['barcode']
-        product = fetch_product_info(barcode)
+        barcode = request.form.get('barcode', '').strip()
+        keyword = request.form.get('keyword', '').strip()
+
+        if barcode:
+            raw_data = fetch_product_info_by_barcode(barcode)
+        elif keyword:
+            raw_data = fetch_product_info_by_keyword(keyword)
+        else:
+            raw_data = None
+
+        if raw_data:
+            product = process_product_data(raw_data)
+
     return render_template_string(TEMPLATE, product=product)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
