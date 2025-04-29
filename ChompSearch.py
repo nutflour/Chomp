@@ -86,7 +86,7 @@ TEMPLATE = '''
     <div class="container">
         <h1>Chomp – Let's Find Your Snack!</h1>
         <form method="post">
-    <input type="text" name="barcode" placeholder="Enter Barcode">
+    <input type="text" name="barcode" placeholder="Enter Barcode or Search by Snack Name">
     <p>or</p>
     <input type="text" name="keyword" placeholder="Search by Snack Name">
     <button type="submit">Search</button>
@@ -98,6 +98,10 @@ TEMPLATE = '''
     <h2>{{ product['name'] }}</h2>
     {% if product['image_url'] %}
         <img src="{{ product['image_url'] }}" alt="Product Image">
+    {% elif request.method == 'POST' %}
+        <p style="color: red;">No matching product found. Please try another barcode or keyword.</p>
+    {% endif %}
+
     {% endif %}
     <h3>Category: {{ product['category'] }}</h3>
     <h3>Nutrition Facts (per 100g)</h3>
@@ -140,13 +144,24 @@ def fetch_product_info_by_keyword(keyword):
         'search_simple': 1,
         'action': 'process',
         'json': 1,
-        'page_size': 1
+        'fields': 'product_name,image_url,nutriments,allergens_tags,ingredients_text',
+        'page_size': 10,
     }
     response = requests.get("https://world.openfoodfacts.org/cgi/search.pl", params=params)
-    data = response.json()
-    if not data.get('products'):
+
+    if response.status_code != 200:
         return None
-    return data['products'][0]
+
+    data = response.json()
+    products = data.get('products', [])
+    
+    # Return the first product that has a name and nutrition info
+    for product in products:
+        if product.get('product_name') and product.get('nutriments'):
+            return product
+
+    return None
+
 
 def process_product_data(product_data):
     nutriments = product_data.get('nutriments', {})
