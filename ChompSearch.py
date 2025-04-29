@@ -85,24 +85,41 @@ TEMPLATE = '''
 <body>
     <div class="container">
         <h1>Chomp – Let's Find Your Snack!</h1>
-        <form method="post">
-    <input type="text" name="barcode" placeholder="Enter Barcode or Search by Snack Name">
+       <form method="post">
+    <input type="text" name="barcode" placeholder="Enter Barcode or leave blank">
     <p>or</p>
     <input type="text" name="keyword" placeholder="Search by Snack Name">
     <button type="submit">Search</button>
 </form>
 
+{% if product %}
+    <div class="info">
+        <h2>{{ product['name'] }}</h2>
+        {% if product['image_url'] %}
+            <img src="{{ product['image_url'] }}" alt="Product Image">
+        {% endif %}
+        <h3>Category: {{ product['category'] }}</h3>
+        <h3>Nutrition Facts (per 100g)</h3>
+        <ul>
+            {% for nutrient, value in product['nutrition'].items() %}
+                <li>{{ nutrient }}: {{ value }}</li>
+            {% endfor %}
+        </ul>
+        <h3>Common Allergens</h3>
+        <ul>
+            {% if product['allergens'] %}
+                {% for allergen in product['allergens'] %}
+                    <li>{{ allergen }}</li>
+                {% endfor %}
+            {% else %}
+                <li>None</li>
+            {% endif %}
+        </ul>
+    </div>
+{% elif request.method == 'POST' %}
+    <p style="color: red;">No matching product found. Please try another barcode or keyword.</p>
+{% endif %}
 
-        {% if product %}
-            <div class="info">
-    <h2>{{ product['name'] }}</h2>
-    {% if product['image_url'] %}
-        <img src="{{ product['image_url'] }}" alt="Product Image">
-    {% elif request.method == 'POST' %}
-        <p style="color: red;">No matching product found. Please try another barcode or keyword.</p>
-    {% endif %}
-
-    {% endif %}
     <h3>Category: {{ product['category'] }}</h3>
     <h3>Nutrition Facts (per 100g)</h3>
     <ul>
