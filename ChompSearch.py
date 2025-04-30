@@ -92,27 +92,29 @@ TEMPLATE = '''
 
         {% if product %}
             <div class="info">
-                <h2>{{ product['name'] }}</h2>
-                {% if product['image_url'] %}
-                    <img src="{{ product['image_url'] }}" alt="Product Image">
-                {% endif %}
-                <h3>Nutrition Facts (per 100g)</h3>
-                <ul>
-                    {% for nutrient, value in product['nutrition'].items() %}
-                        <li>{{ nutrient }}: {{ value }}</li>
-                    {% endfor %}
-                </ul>
-                <h3>Common Allergens</h3>
-                <ul>
-                    {% if product['allergens'] %}
-                        {% for allergen in product['allergens'] %}
-                            <li>{{ allergen }}</li>
-                        {% endfor %}
-                    {% else %}
-                        <li>None</li>
-                    {% endif %}
-                </ul>
-            </div>
+    <h2>{{ product['name'] }}</h2>
+    {% if product['image_url'] %}
+        <img src="{{ product['image_url'] }}" alt="Product Image">
+    {% endif %}
+    <h3>Category: {{ product['category'] }}</h3>
+    <h3>Nutrition Facts (per 100g)</h3>
+    <ul>
+        {% for nutrient, value in product['nutrition'].items() %}
+            <li>{{ nutrient }}: {{ value }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Common Allergens</h3>
+    <ul>
+        {% if product['allergens'] %}
+            {% for allergen in product['allergens'] %}
+                <li>{{ allergen }}</li>
+            {% endfor %}
+        {% else %}
+            <li>None</li>
+        {% endif %}
+    </ul>
+</div>
+
         {% endif %}
     </div>
 </body>
