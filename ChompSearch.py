@@ -85,102 +85,52 @@ TEMPLATE = '''
 <body>
     <div class="container">
         <h1>Chomp – Let's Find Your Snack!</h1>
-       <form method="post">
-    <input type="text" name="barcode" placeholder="Enter Barcode or leave blank">
-    <p>or</p>
-    <input type="text" name="keyword" placeholder="Search by Snack Name">
-    <button type="submit">Search</button>
-</form>
+        <form method="post">
+            <input type="text" name="barcode" placeholder="Enter Barcode" required>
+            <button type="submit">Search</button>
+        </form>
 
-{% if product %}
-    <div class="info">
-        <h2>{{ product['name'] }}</h2>
-        {% if product['image_url'] %}
-            <img src="{{ product['image_url'] }}" alt="Product Image">
-        {% endif %}
-        <h3>Category: {{ product['category'] }}</h3>
-        <h3>Nutrition Facts (per 100g)</h3>
-        <ul>
-            {% for nutrient, value in product['nutrition'].items() %}
-                <li>{{ nutrient }}: {{ value }}</li>
-            {% endfor %}
-        </ul>
-        <h3>Common Allergens</h3>
-        <ul>
-            {% if product['allergens'] %}
-                {% for allergen in product['allergens'] %}
-                    <li>{{ allergen }}</li>
-                {% endfor %}
-            {% else %}
-                <li>None</li>
-            {% endif %}
-        </ul>
-    </div>
-{% elif request.method == 'POST' %}
-    <p style="color: red;">No matching product found. Please try another barcode or keyword.</p>
-{% endif %}
-
-    <h3>Category: {{ product['category'] }}</h3>
-    <h3>Nutrition Facts (per 100g)</h3>
-    <ul>
-        {% for nutrient, value in product['nutrition'].items() %}
-            <li>{{ nutrient }}: {{ value }}</li>
-        {% endfor %}
-    </ul>
-    <h3>Common Allergens</h3>
-    <ul>
-        {% if product['allergens'] %}
-            {% for allergen in product['allergens'] %}
-                <li>{{ allergen }}</li>
-            {% endfor %}
-        {% else %}
-            <li>None</li>
-        {% endif %}
-    </ul>
-</div>
-
+        {% if product %}
+            <div class="info">
+                <h2>{{ product['name'] }}</h2>
+                {% if product['image_url'] %}
+                    <img src="{{ product['image_url'] }}" alt="Product Image">
+                {% endif %}
+                <h3>Nutrition Facts (per 100g)</h3>
+                <ul>
+                    {% for nutrient, value in product['nutrition'].items() %}
+                        <li>{{ nutrient }}: {{ value }}</li>
+                    {% endfor %}
+                </ul>
+                <h3>Common Allergens</h3>
+                <ul>
+                    {% if product['allergens'] %}
+                        {% for allergen in product['allergens'] %}
+                            <li>{{ allergen }}</li>
+                        {% endfor %}
+                    {% else %}
+                        <li>None</li>
+                    {% endif %}
+                </ul>
+            </div>
         {% endif %}
     </div>
 </body>
 </html>
 '''
 
-def fetch_product_info_by_barcode(barcode):
+def fetch_product_info(barcode):
     url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
     response = requests.get(url)
+
     if response.status_code != 200:
         return None
+
     data = response.json()
     if data.get('status') != 1:
         return None
-    return data['product']
 
-def fetch_product_info_by_keyword(keyword):
-    params = {
-        'search_terms': keyword,
-        'search_simple': 1,
-        'action': 'process',
-        'json': 1,
-        'fields': 'product_name,image_url,nutriments,allergens_tags,ingredients_text',
-        'page_size': 10,
-    }
-    response = requests.get("https://world.openfoodfacts.org/cgi/search.pl", params=params)
-
-    if response.status_code != 200:
-        return None
-
-    data = response.json()
-    products = data.get('products', [])
-    
-    # Return the first product that has a name and nutrition info
-    for product in products:
-        if product.get('product_name') and product.get('nutriments'):
-            return product
-
-    return None
-
-
-def process_product_data(product_data):
+    product_data = data['product']
     nutriments = product_data.get('nutriments', {})
     ingredients = product_data.get('ingredients_text', '').lower()
 
@@ -188,6 +138,7 @@ def process_product_data(product_data):
     fat = nutriments.get('fat_100g', 0) or 0
     salt = nutriments.get('salt_100g', 0) or 0
 
+    # Simple classification rules
     if sugar > 10:
         category = "Sweet"
     elif salt > 1 or "salt" in ingredients or "cheese" in ingredients or "spice" in ingredients:
@@ -216,25 +167,33 @@ def process_product_data(product_data):
         'category': category
     }
 
+    product_data = data['product']
+    nutrition = {
+        'Energy (kcal)': product_data.get('nutriments', {}).get('energy-kcal_100g', 'N/A'),
+        'Fat (g)': product_data.get('nutriments', {}).get('fat_100g', 'N/A'),
+        'Carbohydrates (g)': product_data.get('nutriments', {}).get('carbohydrates_100g', 'N/A'),
+        'Sugars (g)': product_data.get('nutriments', {}).get('sugars_100g', 'N/A'),
+        'Proteins (g)': product_data.get('nutriments', {}).get('proteins_100g', 'N/A'),
+        'Salt (g)': product_data.get('nutriments', {}).get('salt_100g', 'N/A'),
+    }
+    allergens = [a.split(':')[-1] for a in product_data.get('allergens_tags', [])]
+
+    return {
+        'name': product_data.get('product_name', 'Unknown Product'),
+        'image_url': product_data.get('image_url', ''),
+        'nutrition': nutrition,
+        'allergens': allergens
+    }
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     product = None
     if request.method == 'POST':
-        barcode = request.form.get('barcode', '').strip()
-        keyword = request.form.get('keyword', '').strip()
-
-        if barcode:
-            raw_data = fetch_product_info_by_barcode(barcode)
-        elif keyword:
-            raw_data = fetch_product_info_by_keyword(keyword)
-        else:
-            raw_data = None
-
-        if raw_data:
-            product = process_product_data(raw_data)
-
+        barcode = request.form['barcode']
+        product = fetch_product_info(barcode)
     return render_template_string(TEMPLATE, product=product)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
