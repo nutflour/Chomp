@@ -167,23 +167,7 @@ def fetch_product_info(barcode):
         'category': category
     }
 
-    product_data = data['product']
-    nutrition = {
-        'Energy (kcal)': product_data.get('nutriments', {}).get('energy-kcal_100g', 'N/A'),
-        'Fat (g)': product_data.get('nutriments', {}).get('fat_100g', 'N/A'),
-        'Carbohydrates (g)': product_data.get('nutriments', {}).get('carbohydrates_100g', 'N/A'),
-        'Sugars (g)': product_data.get('nutriments', {}).get('sugars_100g', 'N/A'),
-        'Proteins (g)': product_data.get('nutriments', {}).get('proteins_100g', 'N/A'),
-        'Salt (g)': product_data.get('nutriments', {}).get('salt_100g', 'N/A'),
-    }
-    allergens = [a.split(':')[-1] for a in product_data.get('allergens_tags', [])]
-
-    return {
-        'name': product_data.get('product_name', 'Unknown Product'),
-        'image_url': product_data.get('image_url', ''),
-        'nutrition': nutrition,
-        'allergens': allergens
-    }
+   
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
